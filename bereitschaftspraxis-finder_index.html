@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nächste Bereitschaftspraxis finden – Landkreis Neunkirchen</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root{--c:#0b5cad;--bg:#f5f7fa;--tx:#1c2430;--mut:#5b6675;--warn:#fff4e5;--warnb:#e08a1e}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--tx);line-height:1.5}
+header{background:#fff;border-bottom:1px solid #dde3ea;padding:1rem 1.25rem}
+header h1{margin:0;font-size:1.4rem}
+header p{margin:.25rem 0 0;color:var(--mut)}
+main{max-width:1100px;margin:0 auto;padding:1rem;display:grid;gap:1rem}
+.card{background:#fff;border-radius:10px;padding:1rem 1.25rem;box-shadow:0 1px 2px rgba(0,0,0,.05)}
+.notice{background:var(--warn);border-left:4px solid var(--warnb)}
+.notice p{margin:.3rem 0}
+form{display:flex;gap:.5rem;flex-wrap:wrap}
+label{font-weight:600;display:block;margin-bottom:.3rem}
+input[type=text]{flex:1 1 280px;padding:.7rem .8rem;font-size:1rem;border:1px solid #b9c3cf;border-radius:8px}
+button{padding:.7rem 1.1rem;font-size:1rem;border:0;border-radius:8px;background:var(--c);color:#fff;cursor:pointer}
+button:hover{filter:brightness(1.08)}
+button:disabled{opacity:.5;cursor:default}
+button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid #e08a1e;outline-offset:2px}
+#map{height:360px;border-radius:10px;z-index:0}
+.status{color:var(--mut);font-size:.95rem;min-height:1.4em;margin:.5rem 0 0}
+.err{color:#a11d1d}
+.res{display:grid;gap:.75rem;margin-top:.5rem}
+.res h3{margin:0 0 .2rem;font-size:1.1rem}
+.best{border:2px solid var(--c)}
+.badge{display:inline-block;background:#e7f1fb;color:var(--c);border-radius:999px;padding:.1rem .6rem;font-size:.82rem;margin-left:.4rem;vertical-align:middle}
+.modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:.5rem;margin-top:.6rem}
+.mode{background:#f3f6fa;border-radius:8px;padding:.5rem .6rem}
+.mode strong{display:block;font-size:.9rem;color:var(--mut);font-weight:600}
+.mode span{font-size:1.15rem;font-weight:700}
+.mode small{display:block;color:var(--mut);font-size:.8rem}
+.legs{font-size:.88rem;color:var(--mut);margin:.4rem 0 0;padding-left:1.1rem}
+.links{margin-top:.6rem;display:flex;gap:.6rem;flex-wrap:wrap;font-size:.92rem}
+.links a{color:var(--c)}
+.small{font-size:.85rem;color:var(--mut)}
+footer{font-size:.85rem;color:var(--mut);padding:1rem;text-align:center}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Nächste Bereitschaftspraxis finden</h1>
+  <p>Für Erwachsene im Landkreis Neunkirchen – Adresse eingeben, Weg und Dauer vergleichen.</p>
+</header>
+
+<main>
+  <section class="card notice" aria-labelledby="hinweis-titel">
+    <p id="hinweis-titel"><strong>Wichtig:</strong> Die Bereitschaftspraxis Neunkirchen-Kohlhof (Erwachsene) soll zum 31.12.2026 schließen. Es gibt widersprüchliche Berichte über eine mögliche Weiterführung. Bitte den aktuellen Stand bei der KV Saarland prüfen.</p>
+    <p>Bei lebensbedrohlichen Beschwerden: <strong>112</strong>. Bereitschaftsdienst: <strong>116117</strong>.</p>
+  </section>
+
+  <section class="card" aria-labelledby="suche-titel">
+    <h2 id="suche-titel" style="margin:0 0 .6rem;font-size:1.15rem">Ihre Adresse</h2>
+    <form id="suche" role="search">
+      <label for="adresse" class="sr-only" style="position:absolute;left:-9999px">Adresse</label>
+      <input type="text" id="adresse" name="adresse" placeholder="z. B. Hauptstraße 1, 66538 Neunkirchen" autocomplete="street-address" required>
+      <button type="submit" id="btn">Praxen suchen</button>
+    </form>
+    <p class="status" id="status" role="status" aria-live="polite"></p>
+  </section>
+
+  <section class="card" aria-label="Karte">
+    <div id="map"></div>
+  </section>
+
+  <section class="card" aria-live="polite" aria-labelledby="ergebnis-titel">
+    <h2 id="ergebnis-titel" style="margin:0;font-size:1.15rem">Ergebnis</h2>
+    <div id="ergebnis" class="res"><p class="small">Geben Sie oben Ihre Adresse ein, um die nächstgelegenen Bereitschaftspraxen zu sehen.</p></div>
+  </section>
+</main>
+
+<footer>
+  Zeiten sind Richtwerte ohne aktuelle Verkehrslage. Fußzeit ist eine Schätzung. ÖPNV-Auskunft ohne Gewähr.
+  Quellen: <a href="https://www.kvsaarland.de/arztebereitschaft-saar-und-116117" target="_blank" rel="noopener">KV Saarland</a>,
+  OpenStreetMap-Nominatim, OSRM, transport.rest. Kartendaten © OpenStreetMap-Mitwirkende.
+</footer>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+/* ==========================================================
+   KONFIGURATION – hier pflegen, wenn sich Standorte ändern
+   ========================================================== */
+const CONFIG = {
+  // Praxen: "adresse" muss vollständig sein (Straße, PLZ, Ort). Ohne Adresse wird der Standort ignoriert.
+  praxen: [
+    { name: 'Bereitschaftsdienstpraxis Homburg', adresse: 'Kirrberger Straße 100, 66421 Homburg', hinweis: 'am Universitätsklinikum des Saarlandes' },
+    { name: 'Bereitschaftsdienstpraxis Saarbrücken', adresse: 'Winterberg 1, 66119 Saarbrücken', hinweis: 'am Klinikum Saarbrücken' },
+    { name: 'Bereitschaftsdienstpraxis Saarlouis', adresse: 'Kapuzinerstraße 4, 66740 Saarlouis', hinweis: 'am Marienhaus Klinikum St. Elisabeth' },
+    { name: 'Bereitschaftsdienstpraxis Lebach', adresse: 'Heeresstraße 49, 66822 Lebach', hinweis: 'am Caritas-Krankenhaus Lebach' },
+    { name: 'Bereitschaftsdienstpraxis St. Wendel', adresse: 'Am Hirschberg 1 a, 66606 St. Wendel', hinweis: 'am Marienkrankenhaus St. Wendel' },
+    { name: 'Bereitschaftsdienstpraxis Merzig', adresse: 'Trierer Straße 148, 66663 Merzig', hinweis: 'am Klinikum Merzig' },
+    { name: 'Zweigpraxis Neunkirchen-Kohlhof', adresse: 'Klinikweg 1-5, 66539 Neunkirchen', hinweis: 'am Marienhaus Klinikum Neunkirchen Kohlhof', aktiv: false }
+  ],
+  zufussKmh: 4.5,          // angenommene Gehgeschwindigkeit
+  zufussUmweg: 1.25,       // Faktor Luftlinie -> Gehweg
+  maxRouten: 3,            // für die nächsten N Praxen werden Auto und ÖPNV abgefragt
+  geocodePauseMs: 1100     // Nominatim: max. 1 Anfrage pro Sekunde
+};
+
+/* ---------- Hilfsfunktionen ---------- */
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const fmtMin = m => { m = Math.round(m); if (m < 60) return `${m} Min.`; return `${Math.floor(m/60)} Std. ${m%60} Min.`; };
+const fmtKm = k => `${k.toFixed(1).replace('.', ',')} km`;
+
+function luftlinieKm(a, b) {
+  const R = 6371, t = x => x * Math.PI / 180;
+  const dLat = t(b.lat - a.lat), dLon = t(b.lon - a.lon);
+  const h = Math.sin(dLat/2)**2 + Math.cos(t(a.lat)) * Math.cos(t(b.lat)) * Math.sin(dLon/2)**2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+/* ---------- Geocoding (Nominatim) ---------- */
+async function geocodeNominatim(q) {
+  const url = 'https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=de&accept-language=de'
+    + '&viewbox=6.6,49.6,7.5,49.1&q=' + encodeURIComponent(q);
+  const r = await fetch(url, { headers: { Accept: 'application/json' } });
+  if (!r.ok) throw new Error('Adresssuche derzeit nicht erreichbar.');
+  const j = await r.json();
+  if (!j.length) return null;
+  return { lat: +j[0].lat, lon: +j[0].lon, label: j[0].display_name };
+}
+
+// Adresssuche mit Ausweichdienst (Photon/komoot), falls Nominatim nicht antwortet
+async function geocode(q) {
+  try {
+    const g = await geocodeNominatim(q);
+    if (g) return g;
+  } catch (e) { console.warn('Nominatim fehlgeschlagen, nutze Ausweichdienst:', e); }
+  const r = await fetch('https://photon.komoot.io/api/?limit=1&lang=de&lat=49.35&lon=7.15&q=' + encodeURIComponent(q));
+  if (!r.ok) throw new Error('Adresssuche derzeit nicht erreichbar (HTTP ' + r.status + ').');
+  const j = await r.json();
+  const f = j.features?.[0];
+  if (!f) return null;
+  const [lon, lat] = f.geometry.coordinates;
+  const p = f.properties || {};
+  return { lat, lon, label: [p.name, p.postcode, p.city].filter(Boolean).join(', ') };
+}
+
+/* ---------- Routing ---------- */
+async function autoRoute(a, b) {
+  const url = `https://router.project-osrm.org/route/v1/driving/${a.lon},${a.lat};${b.lon},${b.lat}?overview=full&geometries=geojson`;
+  const r = await fetch(url);
+  const j = await r.json();
+  if (j.code !== 'Ok' || !j.routes?.length) throw new Error('keine Route');
+  const rt = j.routes[0];
+  return { km: rt.distance / 1000, min: rt.duration / 60, geo: rt.geometry.coordinates };
+}
+
+function fussSchaetzung(a, b) {
+  const km = luftlinieKm(a, b) * CONFIG.zufussUmweg;
+  return { km, min: km / CONFIG.zufussKmh * 60 };
+}
+
+async function oepnvRoute(a, b) {
+  const p = new URLSearchParams({
+    'from.latitude': a.lat, 'from.longitude': a.lon,
+    'to.latitude': b.lat, 'to.longitude': b.lon,
+    results: '1', language: 'de', stopovers: 'false'
+  });
+  const r = await fetch('https://v6.db.transport.rest/journeys?' + p);
+  if (!r.ok) throw new Error('ÖPNV-Auskunft nicht erreichbar.');
+  const j = await r.json();
+  const jo = j.journeys?.[0];
+  if (!jo) return null;
+  const legs = jo.legs.filter(l => l.departure && l.arrival);
+  const start = new Date(legs[0].departure), ende = new Date(legs[legs.length - 1].arrival);
+  const linien = legs.filter(l => l.line && !l.walking).map(l => l.line.name || l.line.product || 'ÖPNV');
+  const beschreibung = legs.map(l => l.line && !l.walking
+      ? `${esc(l.line.name || 'ÖPNV')} ab ${esc(l.origin?.name)} bis ${esc(l.destination?.name)}`
+      : `Fußweg bis ${esc(l.destination?.name || 'Ziel')}`);
+  return { min: (ende - start) / 60000, umstiege: Math.max(0, linien.length - 1), beschreibung };
+}
+
+/* ---------- Karte ---------- */
+let karte, marker = [], linie = null;
+function initKarte() {
+  karte = L.map('map').setView([49.35, 7.15], 10);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 18, attribution: '&copy; OpenStreetMap-Mitwirkende'
+  }).addTo(karte);
+}
+function karteZeigen(start, praxen, geo) {
+  marker.forEach(m => m.remove()); marker = [];
+  if (linie) { linie.remove(); linie = null; }
+  const pts = [];
+  marker.push(L.circleMarker([start.lat, start.lon], { radius: 9, color: '#fff', weight: 2, fillColor: '#d6336c', fillOpacity: 1 })
+    .bindPopup('Ihre Adresse').addTo(karte));
+  pts.push([start.lat, start.lon]);
+  praxen.forEach((p, i) => {
+    marker.push(L.marker([p.lat, p.lon]).bindPopup(`<strong>${esc(p.name)}</strong><br>${esc(p.adresse)}`).addTo(karte));
+    pts.push([p.lat, p.lon]);
+  });
+  if (geo) {
+    linie = L.polyline(geo.map(([lo, la]) => [la, lo]), { color: '#0b5cad', weight: 5, opacity: .7 }).addTo(karte);
+  }
+  karte.fitBounds(pts, { padding: [40, 40] });
+}
+
+/* ---------- Ablauf ---------- */
+let praxenGeo = [];   // Praxen mit Koordinaten
+let praxenFehler = [];  // Gründe, warum Praxen nicht geladen werden konnten
+
+async function praxenVorbereiten() {
+  const mitAdresse = CONFIG.praxen.filter(p => p.adresse && p.aktiv !== false);
+  const ohne = CONFIG.praxen.filter(p => !p.adresse).map(p => p.name);
+  for (const p of mitAdresse) {
+    try {
+      const g = await geocode(p.adresse);
+      if (g) praxenGeo.push({ ...p, lat: g.lat, lon: g.lon });
+      else praxenFehler.push(`${p.name}: Adresse nicht gefunden`);
+    } catch (e) {
+      praxenFehler.push(`${p.name}: ${e.message}`);
+      console.warn('Geocoding fehlgeschlagen für', p.name, e);
+    }
+    await sleep(CONFIG.geocodePauseMs);
+  }
+  if (ohne.length) console.warn('Ohne Adresse, werden nicht angezeigt:', ohne.join(', '));
+  return ohne;
+}
+
+async function suchen(e) {
+  e.preventDefault();
+  const q = $('adresse').value.trim();
+  if (!q) return;
+  const btn = $('btn'); btn.disabled = true;
+  $('status').className = 'status';
+  $('status').textContent = 'Adresse wird gesucht …';
+  try {
+    if (!praxenGeo.length) { praxenFehler = []; $('status').textContent = 'Standorte werden geladen …'; await praxenVorbereiten(); }
+    if (!praxenGeo.length) throw new Error('Standorte konnten nicht geladen werden. ' + (praxenFehler.join('; ') || 'Bitte Seite neu laden.'));
+
+    const ort = await geocode(q);
+    if (!ort) { $('status').className = 'status err'; $('status').textContent = 'Adresse nicht gefunden. Bitte mit PLZ und Ort eingeben.'; return; }
+
+    const start = { lat: ort.lat, lon: ort.lon };
+    const sortiert = praxenGeo
+      .map(p => ({ ...p, luft: luftlinieKm(start, p) }))
+      .sort((a, b) => a.luft - b.luft);
+
+    $('status').textContent = 'Wege werden berechnet …';
+    const top = sortiert.slice(0, CONFIG.maxRouten);
+    const routen = await Promise.all(top.map(async p => {
+      const [auto, oepnv] = await Promise.allSettled([autoRoute(start, p), oepnvRoute(start, p)]);
+      return { auto: auto.status === 'fulfilled' ? auto.value : null,
+               oepnv: oepnv.status === 'fulfilled' ? oepnv.value : null,
+               oepnvFehler: oepnv.status === 'rejected' };
+    }));
+    const fuss = top.map(p => fussSchaetzung(start, p));
+
+    let html = `<p class="small">Ausgangspunkt: ${esc(ort.label)}</p>`;
+    top.forEach((p, i) => {
+      const r = routen[i], f = fuss[i];
+      const oep = r.oepnv
+        ? `<span>${fmtMin(r.oepnv.min)}</span><small>${r.oepnv.umstiege === 0 ? 'ohne Umstieg' : r.oepnv.umstiege + ' Umstieg/Umstiege'}</small>`
+        : `<span>–</span><small>${r.oepnvFehler ? 'Auskunft nicht erreichbar' : 'keine Verbindung gefunden'}</small>`;
+      const auto = r.auto
+        ? `<span>${fmtMin(r.auto.min)}</span><small>${fmtKm(r.auto.km)}</small>`
+        : `<span>–</span><small>Route nicht verfügbar</small>`;
+      const q2 = `origin=${start.lat},${start.lon}&destination=${p.lat},${p.lon}`;
+      html += `
+        <article class="mode-card ${i === 0 ? 'best' : ''}" style="border:1px solid #dde3ea;border-radius:10px;padding:.9rem 1rem;${i===0?'border:2px solid var(--c);':''}">
+          <h3>${esc(p.name)} ${i === 0 ? '<span class="badge">nächste Praxis</span>' : ''}</h3>
+          <div class="small">${esc(p.adresse)}${p.hinweis ? ' – ' + esc(p.hinweis) : ''}</div>
+          <div class="small">Luftlinie: ${fmtKm(p.luft)}</div>
+          <div class="modes">
+            <div class="mode"><strong>Zu Fuß (Schätzung)</strong><span>${fmtMin(f.min)}</span><small>${fmtKm(f.km)} ca.</small></div>
+            <div class="mode"><strong>Mit dem Auto</strong>${auto}</div>
+            <div class="mode"><strong>Mit ÖPNV</strong>${oep}</div>
+          </div>
+          ${r.oepnv ? `<ul class="legs">${r.oepnv.beschreibung.map(b => `<li>${b}</li>`).join('')}</ul>` : ''}
+          <div class="links">
+            <a href="https://www.google.com/maps/dir/?api=1&${q2}&travelmode=walking" target="_blank" rel="noopener">Route zu Fuß öffnen</a>
+            <a href="https://www.google.com/maps/dir/?api=1&${q2}&travelmode=driving" target="_blank" rel="noopener">Route mit Auto öffnen</a>
+            <a href="https://www.google.com/maps/dir/?api=1&${q2}&travelmode=transit" target="_blank" rel="noopener">Route mit ÖPNV öffnen</a>
+          </div>
+        </article>`;
+    });
+    if (sortiert.length > top.length) {
+      html += `<p class="small">Weitere Standorte: ${sortiert.slice(top.length).map(p => `${esc(p.name)} (${fmtKm(p.luft)} Luftlinie)`).join(', ')}</p>`;
+    }
+    html += `<p class="small">Hinweis: Die Fußzeit ist eine Schätzung. Die Auto- und ÖPNV-Zeiten gelten ohne aktuelle Verkehrslage. Öffnungszeiten vor dem Besuch bei der KV Saarland prüfen.</p>`;
+    $('ergebnis').innerHTML = html;
+
+    karteZeigen(start, top, routen[0].auto?.geo);
+    $('status').textContent = `${top.length} nächste Praxen angezeigt.`;
+  } catch (err) {
+    $('status').className = 'status err';
+    $('status').textContent = 'Fehler: ' + (err.message || 'Unbekannter Fehler');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  initKarte();
+  $('suche').addEventListener('submit', suchen);
+});
+</script>
+</body>
+</html>
