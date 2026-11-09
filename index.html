@@ -77,6 +77,9 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid var(-
 }
 .links a:hover{background:var(--badge-bg)}
 .small{font-size:.85rem;color:var(--mut)}
+.check{display:flex;align-items:center;gap:.6rem;margin-top:.7rem;font-size:.95rem;min-height:44px;cursor:pointer}
+.check input{width:20px;height:20px;accent-color:var(--c);flex:0 0 auto}
+.badge-end{background:var(--warn-bg);color:var(--warn-b);border:1px solid var(--warn-b)}
 footer{font-size:.82rem;color:var(--mut);padding:4px 4px 12px;text-align:center;line-height:1.5}
 footer a{color:var(--c)}
 /* Dunkle Karte: Kacheln invertieren, damit sie zum Dark Mode passen */
@@ -110,6 +113,10 @@ footer a{color:var(--c)}
       <button type="submit" id="btn">Praxen suchen</button>
     </form>
     <p class="status" id="status" role="status" aria-live="polite"></p>
+  </section>
+
+  <section class="card" aria-label="Vergleichsoption">
+    <label class="check"><input type="checkbox" id="kohlhof" autocomplete="off"> Ab 2027: Neunkirchen-Kohlhof ausblenden (schließt zum 31.12.2026)</label>
   </section>
 
   <section class="card" aria-label="Karte">
@@ -260,9 +267,10 @@ function karteZeigen(start, praxen, geo) {
 /* ---------- Ablauf ---------- */
 let praxenGeo = [];
 let praxenFehler = [];
+let zuletzt = false;   // true, sobald einmal gesucht wurde
 
 async function praxenVorbereiten() {
-  const mitAdresse = CONFIG.praxen.filter(p => p.adresse && p.aktiv !== false);
+  const mitAdresse = CONFIG.praxen.filter(p => p.adresse);
   for (const p of mitAdresse) {
     try {
       const g = await geocode(p.adresse);
@@ -292,6 +300,7 @@ async function suchen(e) {
 
     const start = { lat: ort.lat, lon: ort.lon };
     const sortiert = praxenGeo
+      .filter(p => p.aktiv !== false || !$('kohlhof').checked)
       .map(p => ({ ...p, luft: luftlinieKm(start, p) }))
       .sort((a, b) => a.luft - b.luft);
 
@@ -340,7 +349,8 @@ async function suchen(e) {
     $('ergebnis').innerHTML = html;
 
     karteZeigen(start, top, routen[0].auto?.geo);
-    $('status').textContent = `${top.length} nächste Praxen angezeigt.`;
+    zuletzt = true;
+    $('status').textContent = `${top.length} nächste Praxen angezeigt. Modus: ` + ($('kohlhof').checked ? 'ab 1.1.2027 (ohne Kohlhof)' : 'aktuell (mit Kohlhof)') + '.';
   } catch (err) {
     $('status').className = 'status err';
     $('status').textContent = 'Fehler: ' + (err.message || 'Unbekannter Fehler');
@@ -352,7 +362,9 @@ async function suchen(e) {
 
 document.addEventListener('DOMContentLoaded', () => {
   initKarte();
+  $('kohlhof').checked = false;
   $('suche').addEventListener('submit', suchen);
+  $('kohlhof').addEventListener('change', () => { if (zuletzt) suchen({ preventDefault() {} }); });
   if (window.ResizeObserver) new ResizeObserver(meldeHoehe).observe(document.body);
   meldeHoehe();
 });
