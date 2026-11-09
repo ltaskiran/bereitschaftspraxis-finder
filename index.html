@@ -3,63 +3,110 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
 <title>Nächste Bereitschaftspraxis finden – Landkreis Neunkirchen</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
-:root{--c:#0b5cad;--bg:#f5f7fa;--tx:#1c2430;--mut:#5b6675;--warn:#fff4e5;--warnb:#e08a1e}
+:root{
+  color-scheme: light dark;
+  --c:#0b5cad; --c-hover:#094a8c; --on-c:#ffffff;
+  --bg:#f5f7fa; --card:#ffffff; --tx:#1c2430; --mut:#5b6675;
+  --line:#dde3ea; --soft:#f3f6fa; --input-b:#b9c3cf;
+  --warn-bg:#fff4e5; --warn-b:#e08a1e; --err:#a11d1d; --badge-bg:#e7f1fb;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --c:#6aaef5; --c-hover:#8cc0f8; --on-c:#0b1220;
+    --bg:#121820; --card:#1b2430; --tx:#e6ebf2; --mut:#9aa6b5;
+    --line:#2f3b4a; --soft:#243041; --input-b:#4a5a6e;
+    --warn-bg:#3a2a12; --warn-b:#f0a030; --err:#ff9a9a; --badge-bg:#1d3350;
+  }
+}
 *{box-sizing:border-box}
-body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--tx);line-height:1.5}
-header{background:#fff;border-bottom:1px solid #dde3ea;padding:1rem 1.25rem}
-header h1{margin:0;font-size:1.4rem}
-header p{margin:.25rem 0 0;color:var(--mut)}
-main{max-width:1100px;margin:0 auto;padding:1rem;display:grid;gap:1rem}
-.card{background:#fff;border-radius:10px;padding:1rem 1.25rem;box-shadow:0 1px 2px rgba(0,0,0,.05)}
-.notice{background:var(--warn);border-left:4px solid var(--warnb)}
-.notice p{margin:.3rem 0}
-form{display:flex;gap:.5rem;flex-wrap:wrap}
+html,body{margin:0;padding:0}
+body{
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  background:var(--bg); color:var(--tx); line-height:1.5;
+  -webkit-text-size-adjust:100%; text-size-adjust:100%;
+}
+.wrap{max-width:960px;margin:0 auto;padding:clamp(8px,2vw,16px);display:grid;gap:clamp(8px,2vw,14px)}
+header h1{margin:0;font-size:clamp(1.2rem,4vw,1.6rem);line-height:1.25}
+header p{margin:.3rem 0 0;color:var(--mut);font-size:clamp(.92rem,2.5vw,1rem)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:clamp(12px,3vw,20px);box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.card h2{margin:0 0 .6rem;font-size:clamp(1.05rem,3vw,1.2rem)}
+.notice{background:var(--warn-bg);border-color:var(--warn-b);border-left-width:4px}
+.notice p{margin:.3rem 0;font-size:.95rem}
+form{display:grid;gap:8px;grid-template-columns:1fr}
 label{font-weight:600;display:block;margin-bottom:.3rem}
-input[type=text]{flex:1 1 280px;padding:.7rem .8rem;font-size:1rem;border:1px solid #b9c3cf;border-radius:8px}
-button{padding:.7rem 1.1rem;font-size:1rem;border:0;border-radius:8px;background:var(--c);color:#fff;cursor:pointer}
-button:hover{filter:brightness(1.08)}
-button:disabled{opacity:.5;cursor:default}
-button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid #e08a1e;outline-offset:2px}
-#map{height:360px;border-radius:10px;z-index:0}
-.status{color:var(--mut);font-size:.95rem;min-height:1.4em;margin:.5rem 0 0}
-.err{color:#a11d1d}
-.res{display:grid;gap:.75rem;margin-top:.5rem}
-.res h3{margin:0 0 .2rem;font-size:1.1rem}
-.best{border:2px solid var(--c)}
-.badge{display:inline-block;background:#e7f1fb;color:var(--c);border-radius:999px;padding:.1rem .6rem;font-size:.82rem;margin-left:.4rem;vertical-align:middle}
-.modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:.5rem;margin-top:.6rem}
-.mode{background:#f3f6fa;border-radius:8px;padding:.5rem .6rem}
-.mode strong{display:block;font-size:.9rem;color:var(--mut);font-weight:600}
-.mode span{font-size:1.15rem;font-weight:700}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0;white-space:nowrap}
+input[type=text]{
+  width:100%; min-height:48px; padding:.7rem .85rem;
+  font-size:16px; /* verhindert Zoom auf iOS */
+  color:var(--tx); background:var(--card);
+  border:1px solid var(--input-b); border-radius:10px;
+}
+input[type=text]::placeholder{color:var(--mut);opacity:.9}
+button{
+  min-height:48px; padding:.7rem 1.2rem; font-size:1rem; font-weight:600;
+  border:0; border-radius:10px; background:var(--c); color:var(--on-c); cursor:pointer;
+}
+button:hover{background:var(--c-hover)}
+button:disabled{opacity:.55;cursor:default}
+button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid var(--warn-b);outline-offset:2px}
+@media (min-width:560px){ form{grid-template-columns:1fr auto} }
+#map{height:clamp(260px,50vh,400px);border-radius:12px;z-index:0;border:1px solid var(--line)}
+.status{color:var(--mut);font-size:.95rem;min-height:1.4em;margin:.6rem 0 0}
+.status.err{color:var(--err)}
+.res{display:grid;gap:12px}
+.ort{margin:0;color:var(--mut);font-size:.9rem}
+.praxis{border:1px solid var(--line);border-radius:12px;padding:clamp(10px,2.5vw,16px);background:var(--card)}
+.praxis.best{border:2px solid var(--c)}
+.praxis h3{margin:0 0 .15rem;font-size:clamp(1rem,2.8vw,1.1rem);line-height:1.3}
+.praxis .meta{color:var(--mut);font-size:.9rem}
+.badge{display:inline-block;background:var(--badge-bg);color:var(--c);border-radius:999px;padding:.05rem .6rem;font-size:.8rem;margin-left:.35rem;vertical-align:middle;font-weight:600}
+.modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-top:10px}
+.mode{background:var(--soft);border-radius:10px;padding:.55rem .65rem;min-width:0}
+.mode strong{display:block;font-size:.85rem;color:var(--mut);font-weight:600}
+.mode span{display:block;font-size:1.15rem;font-weight:700;overflow-wrap:anywhere}
 .mode small{display:block;color:var(--mut);font-size:.8rem}
-.legs{font-size:.88rem;color:var(--mut);margin:.4rem 0 0;padding-left:1.1rem}
-.links{margin-top:.6rem;display:flex;gap:.6rem;flex-wrap:wrap;font-size:.92rem}
-.links a{color:var(--c)}
+.legs{font-size:.88rem;color:var(--mut);margin:.5rem 0 0;padding-left:1.2rem}
+.links{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap}
+.links a{
+  display:inline-flex;align-items:center;min-height:40px;padding:.35rem .8rem;
+  border:1px solid var(--c);border-radius:999px;color:var(--c);text-decoration:none;font-size:.9rem;font-weight:600
+}
+.links a:hover{background:var(--badge-bg)}
 .small{font-size:.85rem;color:var(--mut)}
-footer{font-size:.85rem;color:var(--mut);padding:1rem;text-align:center}
-@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+footer{font-size:.82rem;color:var(--mut);padding:4px 4px 12px;text-align:center;line-height:1.5}
+footer a{color:var(--c)}
+/* Dunkle Karte: Kacheln invertieren, damit sie zum Dark Mode passen */
+@media (prefers-color-scheme: dark){
+  .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.9) contrast(.95)}
+  .leaflet-container{background:var(--soft)}
+  .leaflet-popup-content-wrapper,.leaflet-popup-tip{background:var(--card);color:var(--tx)}
+  .leaflet-container a{color:var(--c)}
+  .leaflet-control-attribution{background:rgba(27,36,48,.8)!important;color:var(--mut)!important}
+}
+@media (prefers-reduced-motion: reduce){ *{transition:none!important;animation:none!important;scroll-behavior:auto!important} }
 </style>
 </head>
 <body>
-<header>
-  <h1>Nächste Bereitschaftspraxis finden</h1>
-  <p>Für Erwachsene im Landkreis Neunkirchen – Adresse eingeben, Weg und Dauer vergleichen.</p>
-</header>
+<div class="wrap">
+  <header>
+    <h1>Nächste Bereitschaftspraxis finden</h1>
+    <p>Für Erwachsene im Landkreis Neunkirchen: Adresse eingeben und Weg und Dauer vergleichen.</p>
+  </header>
 
-<main>
   <section class="card notice" aria-labelledby="hinweis-titel">
     <p id="hinweis-titel"><strong>Wichtig:</strong> Die Bereitschaftspraxis Neunkirchen-Kohlhof (Erwachsene) soll zum 31.12.2026 schließen. Es gibt widersprüchliche Berichte über eine mögliche Weiterführung. Bitte den aktuellen Stand bei der KV Saarland prüfen.</p>
     <p>Bei lebensbedrohlichen Beschwerden: <strong>112</strong>. Bereitschaftsdienst: <strong>116117</strong>.</p>
   </section>
 
   <section class="card" aria-labelledby="suche-titel">
-    <h2 id="suche-titel" style="margin:0 0 .6rem;font-size:1.15rem">Ihre Adresse</h2>
+    <h2 id="suche-titel">Ihre Adresse</h2>
     <form id="suche" role="search">
-      <label for="adresse" class="sr-only" style="position:absolute;left:-9999px">Adresse</label>
-      <input type="text" id="adresse" name="adresse" placeholder="z. B. Hauptstraße 1, 66538 Neunkirchen" autocomplete="street-address" required>
+      <label for="adresse" class="sr-only">Adresse</label>
+      <input type="text" id="adresse" name="adresse" placeholder="z. B. Hauptstraße 1, 66538 Neunkirchen" autocomplete="street-address" enterkeyhint="search" required>
       <button type="submit" id="btn">Praxen suchen</button>
     </form>
     <p class="status" id="status" role="status" aria-live="polite"></p>
@@ -70,16 +117,16 @@ footer{font-size:.85rem;color:var(--mut);padding:1rem;text-align:center}
   </section>
 
   <section class="card" aria-live="polite" aria-labelledby="ergebnis-titel">
-    <h2 id="ergebnis-titel" style="margin:0;font-size:1.15rem">Ergebnis</h2>
+    <h2 id="ergebnis-titel">Ergebnis</h2>
     <div id="ergebnis" class="res"><p class="small">Geben Sie oben Ihre Adresse ein, um die nächstgelegenen Bereitschaftspraxen zu sehen.</p></div>
   </section>
-</main>
 
-<footer>
-  Zeiten sind Richtwerte ohne aktuelle Verkehrslage. Fußzeit ist eine Schätzung. ÖPNV-Auskunft ohne Gewähr.
-  Quellen: <a href="https://www.kvsaarland.de/arztebereitschaft-saar-und-116117" target="_blank" rel="noopener">KV Saarland</a>,
-  OpenStreetMap-Nominatim, OSRM, transport.rest. Kartendaten © OpenStreetMap-Mitwirkende.
-</footer>
+  <footer>
+    Zeiten sind Richtwerte ohne aktuelle Verkehrslage. Fußzeit ist eine Schätzung. ÖPNV-Auskunft ohne Gewähr.<br>
+    Quellen: <a href="https://www.kvsaarland.de/arztebereitschaft-saar-und-116117" target="_blank" rel="noopener">KV Saarland</a>,
+    OpenStreetMap-Nominatim, OSRM, transport.rest. Kartendaten © OpenStreetMap-Mitwirkende.
+  </footer>
+</div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
@@ -87,7 +134,7 @@ footer{font-size:.85rem;color:var(--mut);padding:1rem;text-align:center}
    KONFIGURATION – hier pflegen, wenn sich Standorte ändern
    ========================================================== */
 const CONFIG = {
-  // Praxen: "adresse" muss vollständig sein (Straße, PLZ, Ort). Ohne Adresse wird der Standort ignoriert.
+  // "adresse" muss vollständig sein (Straße, PLZ, Ort). "aktiv: false" blendet einen Standort aus.
   praxen: [
     { name: 'Bereitschaftsdienstpraxis Homburg', adresse: 'Kirrberger Straße 100, 66421 Homburg', hinweis: 'am Universitätsklinikum des Saarlandes' },
     { name: 'Bereitschaftsdienstpraxis Saarbrücken', adresse: 'Winterberg 1, 66119 Saarbrücken', hinweis: 'am Klinikum Saarbrücken' },
@@ -97,10 +144,10 @@ const CONFIG = {
     { name: 'Bereitschaftsdienstpraxis Merzig', adresse: 'Trierer Straße 148, 66663 Merzig', hinweis: 'am Klinikum Merzig' },
     { name: 'Zweigpraxis Neunkirchen-Kohlhof', adresse: 'Klinikweg 1-5, 66539 Neunkirchen', hinweis: 'am Marienhaus Klinikum Neunkirchen Kohlhof', aktiv: false }
   ],
-  zufussKmh: 4.5,          // angenommene Gehgeschwindigkeit
-  zufussUmweg: 1.25,       // Faktor Luftlinie -> Gehweg
-  maxRouten: 3,            // für die nächsten N Praxen werden Auto und ÖPNV abgefragt
-  geocodePauseMs: 1100     // Nominatim: max. 1 Anfrage pro Sekunde
+  zufussKmh: 4.5,
+  zufussUmweg: 1.25,
+  maxRouten: 3,
+  geocodePauseMs: 1100
 };
 
 /* ---------- Hilfsfunktionen ---------- */
@@ -117,7 +164,13 @@ function luftlinieKm(a, b) {
   return 2 * R * Math.asin(Math.sqrt(h));
 }
 
-/* ---------- Geocoding (Nominatim) ---------- */
+/* ---------- Höhe an einbettende Seite melden (für iframes) ---------- */
+function meldeHoehe() {
+  if (window.parent === window) return;
+  window.parent.postMessage({ type: 'bereitschaftspraxis-finder:height', height: document.documentElement.scrollHeight }, '*');
+}
+
+/* ---------- Geocoding ---------- */
 async function geocodeNominatim(q) {
   const url = 'https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=de&accept-language=de'
     + '&viewbox=6.6,49.6,7.5,49.1&q=' + encodeURIComponent(q);
@@ -128,7 +181,7 @@ async function geocodeNominatim(q) {
   return { lat: +j[0].lat, lon: +j[0].lon, label: j[0].display_name };
 }
 
-// Adresssuche mit Ausweichdienst (Photon/komoot), falls Nominatim nicht antwortet
+// Ausweichdienst, falls Nominatim nicht antwortet
 async function geocode(q) {
   try {
     const g = await geocodeNominatim(q);
@@ -182,7 +235,7 @@ async function oepnvRoute(a, b) {
 /* ---------- Karte ---------- */
 let karte, marker = [], linie = null;
 function initKarte() {
-  karte = L.map('map').setView([49.35, 7.15], 10);
+  karte = L.map('map', { scrollWheelZoom: false }).setView([49.35, 7.15], 10);
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 18, attribution: '&copy; OpenStreetMap-Mitwirkende'
   }).addTo(karte);
@@ -194,23 +247,22 @@ function karteZeigen(start, praxen, geo) {
   marker.push(L.circleMarker([start.lat, start.lon], { radius: 9, color: '#fff', weight: 2, fillColor: '#d6336c', fillOpacity: 1 })
     .bindPopup('Ihre Adresse').addTo(karte));
   pts.push([start.lat, start.lon]);
-  praxen.forEach((p, i) => {
+  praxen.forEach(p => {
     marker.push(L.marker([p.lat, p.lon]).bindPopup(`<strong>${esc(p.name)}</strong><br>${esc(p.adresse)}`).addTo(karte));
     pts.push([p.lat, p.lon]);
   });
   if (geo) {
-    linie = L.polyline(geo.map(([lo, la]) => [la, lo]), { color: '#0b5cad', weight: 5, opacity: .7 }).addTo(karte);
+    linie = L.polyline(geo.map(([lo, la]) => [la, lo]), { color: '#3b8ee8', weight: 5, opacity: .75 }).addTo(karte);
   }
   karte.fitBounds(pts, { padding: [40, 40] });
 }
 
 /* ---------- Ablauf ---------- */
-let praxenGeo = [];   // Praxen mit Koordinaten
-let praxenFehler = [];  // Gründe, warum Praxen nicht geladen werden konnten
+let praxenGeo = [];
+let praxenFehler = [];
 
 async function praxenVorbereiten() {
   const mitAdresse = CONFIG.praxen.filter(p => p.adresse && p.aktiv !== false);
-  const ohne = CONFIG.praxen.filter(p => !p.adresse).map(p => p.name);
   for (const p of mitAdresse) {
     try {
       const g = await geocode(p.adresse);
@@ -222,8 +274,6 @@ async function praxenVorbereiten() {
     }
     await sleep(CONFIG.geocodePauseMs);
   }
-  if (ohne.length) console.warn('Ohne Adresse, werden nicht angezeigt:', ohne.join(', '));
-  return ohne;
 }
 
 async function suchen(e) {
@@ -255,7 +305,7 @@ async function suchen(e) {
     }));
     const fuss = top.map(p => fussSchaetzung(start, p));
 
-    let html = `<p class="small">Ausgangspunkt: ${esc(ort.label)}</p>`;
+    let html = `<p class="ort">Ausgangspunkt: ${esc(ort.label)}</p>`;
     top.forEach((p, i) => {
       const r = routen[i], f = fuss[i];
       const oep = r.oepnv
@@ -266,10 +316,10 @@ async function suchen(e) {
         : `<span>–</span><small>Route nicht verfügbar</small>`;
       const q2 = `origin=${start.lat},${start.lon}&destination=${p.lat},${p.lon}`;
       html += `
-        <article class="mode-card ${i === 0 ? 'best' : ''}" style="border:1px solid #dde3ea;border-radius:10px;padding:.9rem 1rem;${i===0?'border:2px solid var(--c);':''}">
+        <article class="praxis ${i === 0 ? 'best' : ''}">
           <h3>${esc(p.name)} ${i === 0 ? '<span class="badge">nächste Praxis</span>' : ''}</h3>
-          <div class="small">${esc(p.adresse)}${p.hinweis ? ' – ' + esc(p.hinweis) : ''}</div>
-          <div class="small">Luftlinie: ${fmtKm(p.luft)}</div>
+          <div class="meta">${esc(p.adresse)}${p.hinweis ? ' – ' + esc(p.hinweis) : ''}</div>
+          <div class="meta">Luftlinie: ${fmtKm(p.luft)}</div>
           <div class="modes">
             <div class="mode"><strong>Zu Fuß (Schätzung)</strong><span>${fmtMin(f.min)}</span><small>${fmtKm(f.km)} ca.</small></div>
             <div class="mode"><strong>Mit dem Auto</strong>${auto}</div>
@@ -277,16 +327,16 @@ async function suchen(e) {
           </div>
           ${r.oepnv ? `<ul class="legs">${r.oepnv.beschreibung.map(b => `<li>${b}</li>`).join('')}</ul>` : ''}
           <div class="links">
-            <a href="https://www.google.com/maps/dir/?api=1&${q2}&travelmode=walking" target="_blank" rel="noopener">Route zu Fuß öffnen</a>
-            <a href="https://www.google.com/maps/dir/?api=1&${q2}&travelmode=driving" target="_blank" rel="noopener">Route mit Auto öffnen</a>
-            <a href="https://www.google.com/maps/dir/?api=1&${q2}&travelmode=transit" target="_blank" rel="noopener">Route mit ÖPNV öffnen</a>
+            <a href="https://www.google.com/maps/dir/?api=1&${q2}&travelmode=walking" target="_blank" rel="noopener">Zu Fuß</a>
+            <a href="https://www.google.com/maps/dir/?api=1&${q2}&travelmode=driving" target="_blank" rel="noopener">Mit dem Auto</a>
+            <a href="https://www.google.com/maps/dir/?api=1&${q2}&travelmode=transit" target="_blank" rel="noopener">Mit ÖPNV</a>
           </div>
         </article>`;
     });
     if (sortiert.length > top.length) {
       html += `<p class="small">Weitere Standorte: ${sortiert.slice(top.length).map(p => `${esc(p.name)} (${fmtKm(p.luft)} Luftlinie)`).join(', ')}</p>`;
     }
-    html += `<p class="small">Hinweis: Die Fußzeit ist eine Schätzung. Die Auto- und ÖPNV-Zeiten gelten ohne aktuelle Verkehrslage. Öffnungszeiten vor dem Besuch bei der KV Saarland prüfen.</p>`;
+    html += `<p class="small">Hinweis: Die Fußzeit ist eine Schätzung. Auto- und ÖPNV-Zeiten gelten ohne aktuelle Verkehrslage. Öffnungszeiten vor dem Besuch bei der KV Saarland prüfen.</p>`;
     $('ergebnis').innerHTML = html;
 
     karteZeigen(start, top, routen[0].auto?.geo);
@@ -296,12 +346,15 @@ async function suchen(e) {
     $('status').textContent = 'Fehler: ' + (err.message || 'Unbekannter Fehler');
   } finally {
     btn.disabled = false;
+    meldeHoehe();
   }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
   initKarte();
   $('suche').addEventListener('submit', suchen);
+  if (window.ResizeObserver) new ResizeObserver(meldeHoehe).observe(document.body);
+  meldeHoehe();
 });
 </script>
 </body>
